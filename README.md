@@ -32,6 +32,3 @@ Please download Eigen tarball from [here](http://bitbucket.org/eigen/eigen/get/3
 
 (**TLDR for Linux and Mac OS X users:** download and extract the tar ball, then create a symlink in /usr/local/include to the "Eigen" folder.)
 
-The codes for Roothan have some issues as of now. The working codes for Hartree-Fock methods are placed in hartree-fock directory.
-
-To build the program compile using "g++ -std=c++14 -o HF hartree-fock.cpp hermite_polynomial.cpp -llapack -llapacke".
