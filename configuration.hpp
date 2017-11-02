@@ -9,14 +9,32 @@ double low_lim = -6.0;
 double up_lim = 6.0;
 double dx = (up_lim - low_lim)/double(no_of_pts);
 const int no_of_sps = 3;
+double tolerance = 0.0001;
 
-const double a = 1.0;
-const double omega=1.0;
-double alpha = 1/sqrt(omega);
+
+double separation;
 
 double V(double);
 
+double inverted_gaussian(double x, double beta)
+{
+  double A0, alpha, gamma;
+  A0 = 600.0;
+  alpha = 15.0;
+  gamma = 1.0;
+  double v = -A0*exp(-(alpha*pow((x-beta),2))/(2*pow(gamma,2)));
+  return v;
+}
+
 double V(double x)
 {
-  return 0.5*pow(omega*x,2);
+  double beta;
+  double v=0.0;
+
+  for(int i=-2; i <=2 ; i++)
+   {
+     beta = i*separation;
+     v += inverted_gaussian(x,beta);
+   }
+  return v;
 }

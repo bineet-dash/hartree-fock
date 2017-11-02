@@ -29,6 +29,7 @@
 #include <cstring>
 #include <cmath>
 #include <fstream>
+#include <sstream>
 #include <chrono>
 #include <string>
 #include <Eigen/Dense>
@@ -77,6 +78,7 @@ bool diagonalize(MatrixXcd Ac, VectorXcd& lambdac, MatrixXcd& vc)
   lambdac.real() = lambda;
   return INFO==0;
 }
+
 
 double rho_H(double r_prime)
 {
@@ -145,13 +147,20 @@ double integrate_psi(int state)
   return trapez_sum;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+  milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 
-  double tolerance;
-  cout << "Enter tolerance: "; cin >> tolerance;
+  if(argc !=2) {cout << "pass proper arguments to main()\n"; exit(1);}
+  istringstream ss(argv[1]);
+  if (!(ss >> separation)) cerr << "Invalid number " << argv[1] << '\n';  ss.clear();
+
+  separation *= 0.01;
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
+
+  ofstream potentialout("data/xvspot.txt");
+  for(int i=0; i<= no_of_pts; i++) {potentialout << point(i) << " " << V(point(i)) << endl;}
 
   MatrixXcd H = MatrixXcd::Zero(point.size(),point.size());
   for(int i=0; i<point.size(); i++)
@@ -166,73 +175,74 @@ int main()
   int master_loop = 1;
   VectorXd oldeival= VectorXd::Zero(no_of_sps);
   VectorXd neweival= VectorXd::Zero(no_of_sps);
+  VectorXd noninteracting_eivals = VectorXd::Zero(no_of_sps);
 
-  diagonalize(H,v,eigenvectors);   eigenvalues = v.real();
+  diagonalize(H,v,eigenvectors); eigenvalues = v.real();
+
   vector < pair<double,VectorXcd> > eigenspectrum;
-  for(int i=0; i<point.size(); i++)
-    eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
+  for(int i=0; i<point.size(); i++) eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
   sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
   eigenspectrum.resize(no_of_sps);
 
-  for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+  for(int i=0; i<no_of_sps; i++) {states.col(i)= eigenspectrum[i].second; noninteracting_eivals(i) = eigenspectrum[i].first;}
   for(int j=0; j<no_of_sps; j++) states.col(j) = states.col(j)/sqrt(integrate_psi(j));
 
-   ofstream fout("data/initialstate.txt");
-   for(int i=0; i<point.size(); i++)
-   {
-     fout << point(i) << " ";
-     for(int j=0; j<no_of_sps; j++) fout << Sqr(states(i,j)) << " ";
-     fout << endl;
-   }
-   fout.close();
-   cout.precision(8);
+  ofstream fout("data/initialstate.txt");
+  for(int i=0; i<point.size(); i++)
+  {
+    fout << point(i) << " ";
+    for(int j=0; j<no_of_sps; j++) fout << Sqr(states(i,j)) << " ";
+    fout << endl;
+  }
+  fout.close();
+  cout.precision(8);
+
+  char choice_for_result = 'n';
 
   for(; ; )
   {
-    cout << "Loop-" << master_loop << "\n============================\n";
-
     for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);}
 
-    // milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     diagonalize(H,v,eigenvectors);   eigenvalues = v.real();
-    // milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    // show_time(begin_ms, end_ms, "Diagonalization");
 
     eigenspectrum.clear();
-    for(int i=0; i<point.size(); i++)
-      eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
+    for(int i=0; i<point.size(); i++) eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
     sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
     eigenspectrum.resize(no_of_sps);
 
     for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+    for(int i=0; i< states.cols(); i++) states.col(i) = states.col(i)/sqrt(integrate_psi(i));
     oldeival = neweival;
     for(int i=0; i<no_of_sps; i++) neweival(i) = eigenspectrum[i].first;
-    cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
-
-    cout << "Normalization of states: " << endl;
-    for(int i=0; i< states.cols(); i++)
-  	{
-      states.col(i) = states.col(i)/sqrt(integrate_psi(i));
-      cout << "Column-" << i << " Normalization= " << integrate_psi(i) << endl;
-    }
-
-    string filename = "data/loop"+to_string(master_loop)+".txt";
-    fout.open(filename);
-    for(int i=0; i<point.size(); i++)
-    {
-      fout << point(i) << " ";
-      for(int j=0; j<no_of_sps; j++) fout << Sqr((states(i,j))) << " ";
-      fout << endl;
-    }
-    fout.close();
 
     double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
+
     if(max_deviation < tolerance) break;
 
-    master_loop++; cout << endl;
+    if(master_loop==10)
+      {
+        cout << "No convergence even after 10 loops.\n";
+        milliseconds end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+        show_time(begin_ms,end_ms,"Hartree_fock calculation has already taken");
+        cout << "Do you want to view the  result from further loops? (Y or N): "; cin >> choice_for_result;
+      }
+
+    if(choice_for_result=='Y'|| choice_for_result=='y')
+     {
+       cout << "Loop-" << master_loop << "\n============================\n";
+       cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
+     }
+
+    master_loop++;
   }
 
+    VectorXd correction = neweival - noninteracting_eivals;
+
+    ofstream dataout; dataout.open("data/correction.txt", std::ofstream::app);
+    dataout << separation << " " << correction.transpose() << endl;
+    dataout.close();
 }
+
 void show_time(milliseconds begin_ms, milliseconds end_ms,string s)
 {
    long int t = (end_ms.count()-begin_ms.count())/1000;

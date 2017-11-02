@@ -1,7 +1,8 @@
 *
 !*.cpp
-!*.md
 !*.hpp
+!*.sh
+!*.md
 !.gitignore
 test*
 debug*
