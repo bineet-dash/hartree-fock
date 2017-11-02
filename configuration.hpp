@@ -12,16 +12,16 @@ const int no_of_sps = 3;
 double tolerance = 0.0001;
 
 
-double separation;
+double separation; int no_of_wells;
 
 double V(double);
 
 double inverted_gaussian(double x, double beta)
 {
   double A0, alpha, gamma;
-  A0 = 600.0;
+  A0 = 600.0;     //depth
   alpha = 15.0;
-  gamma = 1.0;
+  gamma = 1.0;    //spread
   double v = -A0*exp(-(alpha*pow((x-beta),2))/(2*pow(gamma,2)));
   return v;
 }
@@ -30,8 +30,9 @@ double V(double x)
 {
   double beta;
   double v=0.0;
+  int N = (no_of_wells-1)/2;
 
-  for(int i=-2; i <=2 ; i++)
+  for(int i=-N; i<=N; i++)
    {
      beta = i*separation;
      v += inverted_gaussian(x,beta);

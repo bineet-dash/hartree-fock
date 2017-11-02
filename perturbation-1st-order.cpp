@@ -1,5 +1,5 @@
 /*
- * hartree_fock.cpp
+ * perturbation-1st-order.cpp
  *
  * Copyright 2017 Bineet Dash <bineet@bineet-ubuntu>
  *
@@ -106,26 +106,24 @@ double rho_HF(double r, double r_prime)
   if(denom != 0) return num/denom; else return 0.0;
 }
 
-double integrand(double r, double r_prime)
+double vhf_integrand(double r, double r_prime)
 {
   return (rho_H(r_prime)-rho_HF(r,r_prime))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
 }
 
 double vhf(double r)
 {
-  double (*func_x)(double, double) = &integrand;
-
   double trapez_sum;
   double fa, fb,x, step;
 
   step=(up_lim - low_lim)/((double) number_of_mesh);
-  fa=(*func_x)(r,low_lim)/2.0;
-  fb=(*func_x)(r,up_lim)/2.0;
+  fa = vhf_integrand(r,low_lim)/2.0;
+  fb = vhf_integrand(r,up_lim)/2.0;
   trapez_sum=0.;
   for (int j=1; j < number_of_mesh; j++)
   {
     x=j*step+low_lim;
-    trapez_sum+=(*func_x)(r,x);
+    trapez_sum+=vhf_integrand(r,x);
   }
   trapez_sum=(trapez_sum+fb+fa)*step;
   return trapez_sum;
@@ -155,23 +153,16 @@ double integrate_perturbation(int i)
 
 double integrate_psi(int state)
 {
-  double trapez_sum;
-  double fa, fb;
-
-  fa= Sqr(states(0,state))/2.0;
-  fb= Sqr(states(states.rows()-1,state))/2.0;
-
-  trapez_sum=0.0;
+  double fa= Sqr(states(0,state))/2.0;
+  double fb= Sqr(states(states.rows()-1,state))/2.0;
+  double trapez_sum=0.0;
   for (int j=1; j < point.size()-1; j++) trapez_sum+= Sqr(states(j,state));
-
-  trapez_sum=(trapez_sum+fb+fa)*dx;
-  return trapez_sum;
+  return (trapez_sum+fb+fa)*dx;
 }
 
 int main()
 {
-
-  cout << "Enter separation: "; cin >> separation;
+  cout << "Enter separation and no_of_wells: "; cin >> separation >> no_of_wells;
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
 
