@@ -17,8 +17,8 @@ Extra parameters, if needed in the definition of potential,
 can be declared in the [configuration.hpp](configuration.hpp) file. If these variables need to be used in the main program (e.g. if needed as an user input), then declare these variables as extern in [common_globals.hpp](common_globals.hpp).
 
 Suppose you need an extra parameter *A*  in the definition of potential, which has to be obtained from user input. Then
-declare **double A**  in the beginning of [configuration.hpp](configuration.hpp) and add **extern double A** at the end of [common_globals.hpp](common_globals.hpp). Now you can use the variable *A* in the main() as a global variable without declaring it anymore. 
- 
+declare **double A**  in the beginning of [configuration.hpp](configuration.hpp) and add **extern double A** at the end of [common_globals.hpp](common_globals.hpp). Now you can use the variable *A* in the main() as a global variable without declaring it anymore.
+
 To build the program compile using "g++ -std=c++14 -o HF hartree-fock.cpp configuration.hpp -llapack -llapacke".
 
 # System Requirements:
@@ -30,5 +30,4 @@ To build the program compile using "g++ -std=c++14 -o HF hartree-fock.cpp config
 # Installation Instruction for Eigen
 Please download Eigen tarball from [here](http://bitbucket.org/eigen/eigen/get/3.3.4.tar.bz2) . Follow the instruction manual from http://eigen.tuxfamily.org/dox/GettingStarted.html#title2 regarding installation of Eigen.
 
-(**TLDR for Linux and Mac OS X users:** download and extract the tar ball, then create a symlink in /usr/local/include to the "Eigen" folder.)
-
+(**TLDR for Linux and Mac users:** download and extract the tar ball, then create a symlink in /usr/local/include to the "Eigen" folder.)
