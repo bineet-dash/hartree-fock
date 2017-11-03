@@ -10,7 +10,7 @@ The potential, its parameters and other constants are defined in configuration.h
 
 ## Defining the potential
 
-The potential is defined in the [**double V (double x)**](https://github.com/bineet-dash/hartree-fock/blob/2fddc0350622af012fab86693d9f17f81597daba/configuration.hpp#L13) function in the [configuration.hpp](configuration.hpp) file. Modify the definition as required, but _do not_ add other arguments to the function. According to the nature of the potential, modify the upper limit, lower limit and the density of grid points in the [configuration.hpp](configuration.hpp) file.
+The potential is defined in the [**double V (double x)**](https://github.com/bineet-dash/hartree-fock/blob/1e6b9e808b0ea9da7f681aaa5f67ecbac277f2cf/configuration.hpp#L18) function in the [configuration.hpp](configuration.hpp) file. Modify the definition as required, but _do not_ add other arguments to the function. According to the nature of the potential, modify the upper limit, lower limit and the density of grid points in the [configuration.hpp](configuration.hpp) file.
 
 ## Defining the parameters in the potential
 Extra parameters, if needed in the definition of potential,
