@@ -4,7 +4,7 @@ This branch implements the averaged density Hartree-Fock method to find SCF corr
 
 # Building and Running
 
-The potential, its parameters and other constants are placed in configuration.hpp file.  Any modification of fixed paramters can be performed within the configuration.hpp file.
+The potential, its parameters and other constants are placed in [configuration.hpp](configuration.hpp) file.  Any modification of fixed paramters can be performed within the [configuration.hpp](configuration.hpp) file.
 
 To build the program compile using "g++ -std=c++14 -o HF hartree-fock.cpp configuration.hpp -llapack -llapacke".
 
