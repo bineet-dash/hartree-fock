@@ -8,7 +8,7 @@ The potential, its parameters and other constants are placed in [configuration.h
 
 To build the program compile using "**g++ -std=c++14 -o HF hartree-fock.cpp configuration.hpp -llapack -llapacke**".
 
-The program takes **2 arguments** with **main()**. First argument specifies 100 x well-separation, and the second argument is the number of wells. Therefore to execute the program with _N_  separated by _x_, run **./HF x*100 N**. For example, for finding the correction for 5 wells with well-separation of 0.35 unit, run _./HF 35 5_.
+The program takes **2 arguments** with **main()**. First argument specifies 100 x well-separation, and the second argument is the number of wells. Therefore to execute the program with _N_ wells separated by distance _x_, run **./HF x*100 N**. For example, for finding the correction for 5 wells with well-separation of 0.35 unit, run _./HF 35 5_.
 
 # System Requirements:
  1. C++ (g++ -std=c++14)
