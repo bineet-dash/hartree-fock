@@ -47,6 +47,7 @@ typedef std::complex <double> cd;
 
 VectorXd point(no_of_pts+1);
 MatrixXcd states(point.size(),no_of_sps);
+MatrixXcd old_states(point.size(),no_of_sps);
 
 VectorXd rho_H(point.size());
 MatrixXd rho_HF(point.size(),point.size());
@@ -150,10 +151,14 @@ int main(int argc, char* argv[])
   if(argc !=3) {cout << "pass proper arguments to main()\n"; exit(1);}
   istringstream ss(argv[1]);
   if (!(ss >> separation)) {cerr << "Invalid separation. Input: " << argv[1] << ". Exiting...\n"; exit(1);}  ss.clear();
+  separation *= 0.01;
   ss.str(argv[2]);
   if (!(ss >> no_of_wells)) {cerr << "Invalid number of wells. Input: " << argv[2] << ". Exiting...\n"; exit(1);}  ss.clear();
 
-  separation *= 0.01;
+  double current_part, old_part;
+  cout << "Enter contribution of current_part and old_part: ";
+  cin >> current_part >> old_part;
+  if(current_part+old_part != 1.0 || current_part < 0.0 || old_part < 0.0) {cerr << "Enter proper values. Exiting...\n"; exit(1);}
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
 
@@ -171,7 +176,7 @@ int main(int argc, char* argv[])
 
   VectorXcd v; MatrixXcd eigenvectors; VectorXd eigenvalues;
   int master_loop = 1;
-  VectorXd oldeival= VectorXd::Zero(no_of_sps);
+  VectorXd old_eival= VectorXd::Zero(no_of_sps);
   VectorXd neweival= VectorXd::Zero(no_of_sps);
   VectorXd noninteracting_eivals = VectorXd::Zero(no_of_sps);
 
@@ -195,7 +200,7 @@ int main(int argc, char* argv[])
   fout.close();
   cout.precision(8);
 
-  char choice_for_result = 'n';
+  char choice_for_result = 'y';
 
   for(; ; )
   {
@@ -209,20 +214,20 @@ int main(int argc, char* argv[])
     }
     for(int i=0; i<rho_H.size(); i++) vhf(i) = vhf_elements(i);
 
-    end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    show_time(begin_ms,end_ms,"rho_h, rho_HF and vhf calc took");
+    // end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    // show_time(begin_ms,end_ms,"rho_h, rho_HF and vhf calc took");
 
-    begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    // begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 
     for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + vhf(i);}
 
-    end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    show_time(begin_ms,end_ms,"Hamiltonian update took");
+    // end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    // show_time(begin_ms,end_ms,"Hamiltonian update took");
 
-    begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    //begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     diagonalize(H,v,eigenvectors);   eigenvalues = v.real();
-    end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
-    show_time(begin_ms,end_ms,"Diagonalization took");
+    // end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    // show_time(begin_ms,end_ms,"Diagonalization took");
 
     eigenspectrum.clear();
     for(int i=0; i<point.size(); i++) eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
@@ -230,12 +235,17 @@ int main(int argc, char* argv[])
     eigenspectrum.resize(no_of_sps);
 
 
-    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+    for(int i=0; i< states.cols(); i++)
+    {
+      old_states.col(i) = states.col(i);
+      states.col(i)= eigenspectrum[i].second;
+    }
     for(int i=0; i< states.cols(); i++) states.col(i) = states.col(i)/sqrt(integrate_psi(i));
-    oldeival = neweival;
-    for(int i=0; i<no_of_sps; i++) neweival(i) = eigenspectrum[i].first;
+    for(int i=0; i< states.cols(); i++) states.col(i) = current_part*states.col(i) + old_part*old_states.col(i);
 
-    double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
+    old_eival = neweival; for(int i=0; i<no_of_sps; i++) neweival(i) = eigenspectrum[i].first;
+
+    double max_deviation = (neweival - old_eival).cwiseAbs().maxCoeff();
 
     if(max_deviation < tolerance) break;
 
