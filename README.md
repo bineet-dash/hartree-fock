@@ -6,9 +6,9 @@ This branch implements the averaged density Hartree-Fock method to find SCF corr
 
 The potential, its parameters and other constants are placed in [configuration.hpp](configuration.hpp) file.  Any modification of fixed paramters can be performed within the [configuration.hpp](configuration.hpp) file.
 
-To build the program compile using "g++ -std=c++14 -o HF hartree-fock.cpp configuration.hpp -llapack -llapacke".
+To build the program compile using "**g++ -std=c++14 -o HF hartree-fock.cpp configuration.hpp -llapack -llapacke**".
 
-The program takes an argument with main() which specifies 100 x well-separation. Therefore to execute the program with a well-separation of 'x', run ./HF x*100. For example, for finding the correction for a well-separation of 0.35 unit, run ./HF 35.
+The program takes **2 arguments** with **main()**. First argument specifies 100 x well-separation, and the second argument is the number of wells. Therefore to execute the program with _N_  separated by _x_, run **./HF x*100 N**. For example, for finding the correction for 5 wells with well-separation of 0.35 unit, run _./HF 35 5_.
 
 # System Requirements:
  1. C++ (g++ -std=c++14)
