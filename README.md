@@ -10,15 +10,15 @@ The potential, its parameters and other constants are defined in configuration.h
 
 ## Defining the potential
 
-The potential is defined in the **double V (double x)** function in the "configuration.hpp" file. Modify the definition as required, but _do not_ add other arguments to the function. According to the nature of the potential, modify the upper limit, lower limit and the density of grid points in the "configuration.hpp" file.
+The potential is defined in the [**double V (double x)**](https://github.com/bineet-dash/hartree-fock/blob/2fddc0350622af012fab86693d9f17f81597daba/configuration.hpp#L13) function in the [configuration.hpp](configuration.hpp) file. Modify the definition as required, but _do not_ add other arguments to the function. According to the nature of the potential, modify the upper limit, lower limit and the density of grid points in the [configuration.hpp](configuration.hpp) file.
 
 ## Defining the parameters in the potential
 Extra parameters, if needed in the definition of potential,
-can be declared in the "configuration.hpp" file. Then declare these new variables as extern in "common_globals.hpp".
+can be declared in the [configuration.hpp](configuration.hpp) file. If these variables need to be used in the main program (e.g. if needed as an user input), then declare these variables as extern in [common_globals.hpp](common_globals.hpp).
 
-Suppose you need an extra parameter *A*  in the definition of potential. Then
-declare **double A**  in the beginning of "configuration.hpp", and add **extern double A** at the end of "common_globals.hpp".
-
+Suppose you need an extra parameter *A*  in the definition of potential, which has to be obtained from user input. Then
+declare **double A**  in the beginning of [configuration.hpp](configuration.hpp) and add **extern double A** at the end of [common_globals.hpp](common_globals.hpp). Now you can use the variable *A* in the main() as a global variable without declaring it anymore. 
+ 
 To build the program compile using "g++ -std=c++14 -o HF hartree-fock.cpp configuration.hpp -llapack -llapacke".
 
 # System Requirements:
