@@ -10,9 +10,11 @@ double dx = (up_lim - low_lim)/double(no_of_pts);
 const int no_of_sps = 3;
 double tolerance = 0.0001;
 
+double V(double);
+
 const double omega=1.0;
 
-double V(double);
+
 
 double V(double x)
 {
