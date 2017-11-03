@@ -31,6 +31,7 @@
 #include <fstream>
 #include <chrono>
 #include <string>
+#include <sstream>
 #include <Eigen/Dense>
 #include <lapacke.h>
 
@@ -46,6 +47,10 @@ typedef std::complex <double> cd;
 
 VectorXd point(no_of_pts+1);
 MatrixXcd states(point.size(),no_of_sps);
+
+VectorXd rho_H(point.size());
+MatrixXd rho_HF(point.size(),point.size());
+VectorXd vhf(point.size());
 
 double Sqr(cd x){return (x*conj(x)).real();}
 double filter(double x) {if(x<1e-8) return 0.0; else return x;}
@@ -78,60 +83,52 @@ bool diagonalize(MatrixXcd Ac, VectorXcd& lambdac, MatrixXcd& vc)
   return INFO==0;
 }
 
-double rho_H(double r_prime)
+double rho_H_elements(int n_prime)
 {
-  int n_prime = int((r_prime - low_lim)/dx);
   double rho=0.0;
   for(int i=0; i< no_of_sps; i++)
-  {
-    rho += (conj(states(n_prime,i))*states(n_prime,i)).real();
-  }          //phi_i*(r')phi_i(r')
+    rho += (conj(states(n_prime,i))*states(n_prime,i)).real();  //phi_i*(r')phi_i(r')
   return rho;
 }
 
-double rho_HF(double r, double r_prime)
+double rho_HF_elements(int n, int n_prime)
 {
   double num=0.0; double denom=0.0;
-  int n = (r - low_lim)/dx;
-  int n_prime = (r_prime - low_lim)/dx;
 
   for(int k=0; k< no_of_sps; k++)
   {
     for(int j=0; j< no_of_sps; j++)
-    {
-      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real();
-    }        //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
+      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real(); //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
   }
-  denom = rho_H(r);
+  denom = rho_H(n);
   if(denom != 0) return num/denom; else return 0.0;
 }
 
-double vhf_integrand(double r, double r_prime)
+double vhf_integrand(int n, int n_prime)
 {
-  return (rho_H(r_prime)-rho_HF(r,r_prime))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
+  double epsilon = 1/(2.0*double(point.size()));
+  return (rho_H(n_prime)-rho_HF(n,n_prime))/(abs(point(n)-point(n_prime)) + epsilon);
 }
 
-double vhf(double r)
+double vhf_elements(int n)
 {
   double trapez_sum;
-  double fa, fb,x, step;
+  double fa, fb;
 
-  step=(up_lim - low_lim)/((double) number_of_mesh);
-  fa = vhf_integrand(r,low_lim)/2.0;
-  fb = vhf_integrand(r,up_lim)/2.0;
+  fa=vhf_integrand(n,0)/2.0;
+  fb=vhf_integrand(n,point.size()-1)/2.0;
   trapez_sum=0.;
-  for (int j=1; j < number_of_mesh; j++)
+  for (int j=1; j < point.size()-1; j++)
   {
-    x=j*step+low_lim;
-    trapez_sum+=vhf_integrand(r,x);
+    trapez_sum+=vhf_integrand(n,j);
   }
-  trapez_sum=(trapez_sum+fb+fa)*step;
+  trapez_sum=(trapez_sum+fb+fa)*dx;
   return trapez_sum;
 }
 
 double first_order_perturbation(int pos, int i)
 {
-  return Sqr(states(pos,i))*vhf(point(pos));
+  return Sqr(states(pos,i))*vhf(pos);
 }
 
 double integrate_perturbation(int i)
@@ -160,9 +157,14 @@ double integrate_psi(int state)
   return (trapez_sum+fb+fa)*dx;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-  cout << "Enter separation and no_of_wells: "; cin >> separation >> no_of_wells;
+  if(argc !=3) {cout << "pass proper arguments to main()\n"; exit(1);}
+  istringstream ss(argv[1]);
+  if (!(ss >> separation)) {cerr << "Invalid separation. Input: " << argv[1] << ". Exiting...\n"; exit(2);}  ss.clear();
+  separation *= 0.01;
+  ss.str(argv[2]);
+  if (!(ss >> no_of_wells)) {cerr << "Invalid number of wells. Input: " << argv[2] << ". Exiting...\n"; exit(3);}  ss.clear();
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
 
@@ -188,19 +190,20 @@ int main()
   eigenspectrum.resize(no_of_sps);
 
   for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+  for(int i=0; i<no_of_sps; i++) states.col(i) = states.col(i)/sqrt(integrate_psi(i));
 
-  for(int j=0; j<no_of_sps; j++) states.col(j) = states.col(j)/sqrt(integrate_psi(j));
+  for(int i=0; i<rho_H.size(); i++) rho_H(i) = rho_H_elements(i);
+  for(int i=0; i<rho_HF.rows(); i++)
+  {
+    for(int j=0; j<rho_HF.cols(); j++)
+      rho_HF(i,j) = rho_HF_elements(i,j);
+  }
+  for(int i=0; i<rho_H.size(); i++) {vhf(i) = vhf_elements(i);}
 
-   ofstream fout("data/initialstate.txt");
-   for(int i=0; i<point.size(); i++)
-   {
-     fout << point(i) << " ";
-     for(int j=0; j<no_of_sps; j++) fout << Sqr(states(i,j)) << " ";
-     fout << endl;
-   }
-   fout.close();
-   cout.precision(8);
-
-   for(int i=0; i< no_of_sps; i++)
-    std::cout << "The first_order_perturbation for state:"<< i << " is: " << integrate_perturbation(i) << '\n';
+  ofstream dataout; dataout.open("data/perturbation.txt",std::ofstream::app);
+  dataout << separation << " ";
+  for(int i=0; i< no_of_sps; i++) dataout << integrate_perturbation(i) << " ";
+  dataout << endl;
+  dataout.close();
+  //   std::cout << "The first_order_perturbation for state:"<< i << " is: " << integrate_perturbation(i) << '\n';
 }
