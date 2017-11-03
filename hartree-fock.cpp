@@ -151,9 +151,11 @@ int main(int argc, char* argv[])
 {
   milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 
-  if(argc !=2) {cout << "pass proper arguments to main()\n"; exit(1);}
+  if(argc !=3) {cout << "pass proper arguments to main()\n"; exit(1);}
   istringstream ss(argv[1]);
-  if (!(ss >> separation)) cerr << "Invalid number " << argv[1] << '\n';  ss.clear();
+  if (!(ss >> separation)) {cerr << "Invalid separation. Input: " << argv[1] << ". Exiting...\n"; exit(1);}  ss.clear();
+  ss.str(argv[2]);
+  if (!(ss >> no_of_wells)) {cerr << "Invalid number of wells. Input: " << argv[2] << ". Exiting...\n"; exit(1);}  ss.clear();
 
   separation *= 0.01;
 
