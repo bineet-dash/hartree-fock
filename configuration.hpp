@@ -4,15 +4,13 @@
 using namespace std;
 
 int no_of_pts=1000;
-const int number_of_mesh=100;
 double low_lim = -6.0;
 double up_lim = 6.0;
 double dx = (up_lim - low_lim)/double(no_of_pts);
 const int no_of_sps = 3;
+double tolerance = 0.0001;
 
-const double a = 1.0;
 const double omega=1.0;
-double alpha = 1/sqrt(omega);
 
 double V(double);
 

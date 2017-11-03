@@ -46,6 +46,11 @@ typedef std::complex <double> cd;
 
 VectorXd point(no_of_pts+1);
 MatrixXcd states(point.size(),no_of_sps);
+MatrixXcd old_states(point.size(),no_of_sps);
+
+VectorXd rho_H(point.size());
+MatrixXd rho_HF(point.size(),point.size());
+VectorXd vhf(point.size());
 
 double Sqr(cd x){return (x*conj(x)).real();}
 double filter(double x) {if(x<1e-8) return 0.0; else return x;}
@@ -78,54 +83,46 @@ bool diagonalize(MatrixXcd Ac, VectorXcd& lambdac, MatrixXcd& vc)
   return INFO==0;
 }
 
-double rho_H(double r_prime)
+double rho_H_elements(int n_prime)
 {
-  int n_prime = int((r_prime - low_lim)/dx);
   double rho=0.0;
   for(int i=0; i< no_of_sps; i++)
-  {
-    rho += (conj(states(n_prime,i))*states(n_prime,i)).real();
-  }          //phi_i*(r')phi_i(r')
+    rho += (conj(states(n_prime,i))*states(n_prime,i)).real();  //phi_i*(r')phi_i(r')
   return rho;
 }
 
-double rho_HF(double r, double r_prime)
+double rho_HF_elements(int n, int n_prime)
 {
   double num=0.0; double denom=0.0;
-  int n = (r - low_lim)/dx;
-  int n_prime = (r_prime - low_lim)/dx;
 
   for(int k=0; k< no_of_sps; k++)
   {
     for(int j=0; j< no_of_sps; j++)
-    {
-      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real();
-    }        //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
+      num += (conj(states(n_prime,k))*states(n,k)*conj(states(n,j))*states(n_prime,j)).real(); //phi_k*(r')phi_k(r)phi_j*(r)phi_j(r')
   }
-  denom = rho_H(r);
+  denom = rho_H(n);
   if(denom != 0) return num/denom; else return 0.0;
 }
 
-double integrand(double r, double r_prime)
+double vhf_integrand(int n, int n_prime)
 {
-  return (rho_H(r_prime)-rho_HF(r,r_prime))/(abs(r - r_prime)+1/(2.0*double(number_of_mesh)));
+  double epsilon = 1/(2.0*double(point.size()));
+  return (rho_H(n_prime)-rho_HF(n,n_prime))/(abs(point(n)-point(n_prime)) + epsilon);
 }
 
-double integrate_rho(double r, double (*func_x)(double, double))
+double vhf_elements(int n)
 {
   double trapez_sum;
-  double fa, fb,x, step;
+  double fa, fb;
 
-  step=(up_lim - low_lim)/((double) number_of_mesh);
-  fa=(*func_x)(r,low_lim)/2.0;
-  fb=(*func_x)(r,up_lim)/2.0;
+  fa=vhf_integrand(n,0)/2.0;
+  fb=vhf_integrand(n,point.size()-1)/2.0;
   trapez_sum=0.;
-  for (int j=1; j < number_of_mesh; j++)
+  for (int j=1; j < point.size()-1; j++)
   {
-    x=j*step+low_lim;
-    trapez_sum+=(*func_x)(r,x);
+    trapez_sum+=vhf_integrand(n,j);
   }
-  trapez_sum=(trapez_sum+fb+fa)*step;
+  trapez_sum=(trapez_sum+fb+fa)*dx;
   return trapez_sum;
 }
 
@@ -147,16 +144,16 @@ double integrate_psi(int state)
 
 int main()
 {
-
-  double tolerance;
-  cout << "Enter tolerance: "; cin >> tolerance;
+  double current_part, old_part;
+  cout << "Enter contribution of current_part and old_part: ";
+  cin >> current_part >> old_part;
+  if(current_part+old_part != 1.0 || current_part < 0.0 || old_part < 0.0) {cerr << "Enter proper values. Exiting...\n"; exit(1);}
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
-
   MatrixXcd H = MatrixXcd::Zero(point.size(),point.size());
   for(int i=0; i<point.size(); i++)
   {
-      int j = (i==point.size()-1)? 0 : i+1;
+      int j = (i==point.size()-1)? 0 : i+1; //Periodic Boundary Condition
       H(i,j)= -1/(2*dx*dx);
       H(j,i)= -1/(2*dx*dx);
       H(i,i) = 1/(dx*dx)+ V(point(i));
@@ -166,15 +163,17 @@ int main()
   int master_loop = 1;
   VectorXd oldeival= VectorXd::Zero(no_of_sps);
   VectorXd neweival= VectorXd::Zero(no_of_sps);
+  VectorXd noninteracting_eivals = VectorXd::Zero(no_of_sps);
 
   diagonalize(H,v,eigenvectors);   eigenvalues = v.real();
+
   vector < pair<double,VectorXcd> > eigenspectrum;
   for(int i=0; i<point.size(); i++)
     eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
   sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
   eigenspectrum.resize(no_of_sps);
 
-  for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
+  for(int i=0; i<no_of_sps; i++) {states.col(i)= eigenspectrum[i].second; noninteracting_eivals(i) = eigenspectrum[i].first;}
   for(int j=0; j<no_of_sps; j++) states.col(j) = states.col(j)/sqrt(integrate_psi(j));
 
    ofstream fout("data/initialstate.txt");
@@ -187,11 +186,19 @@ int main()
    fout.close();
    cout.precision(8);
 
+   char choice_for_result = 'y';
+
   for(; ; )
   {
-    cout << "Loop-" << master_loop << "\n============================\n";
+    for(int i=0; i<rho_H.size(); i++) rho_H(i) = rho_H_elements(i);
+    for(int i=0; i<rho_HF.rows(); i++)
+    {
+      for(int j=0; j<rho_HF.cols(); j++)
+        rho_HF(i,j) = rho_HF_elements(i,j);
+    }
+    for(int i=0; i<rho_H.size(); i++) vhf(i) = vhf_elements(i);
 
-    for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + integrate_rho(point(i),&integrand);}
+    for(int i=0; i<point.size(); i++) {H(i,i) = 1/(dx*dx) + V(point(i)) + vhf(i);}
 
     // milliseconds begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     diagonalize(H,v,eigenvectors);   eigenvalues = v.real();
@@ -199,22 +206,19 @@ int main()
     // show_time(begin_ms, end_ms, "Diagonalization");
 
     eigenspectrum.clear();
-    for(int i=0; i<point.size(); i++)
-      eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
+    for(int i=0; i<point.size(); i++)   eigenspectrum.push_back(make_pair(eigenvalues(i),eigenvectors.col(i)));
     sort(eigenspectrum.begin(),eigenspectrum.end(),compare);
     eigenspectrum.resize(no_of_sps);
 
-    for(int i=0; i<no_of_sps; i++) states.col(i)= eigenspectrum[i].second;
-    oldeival = neweival;
-    for(int i=0; i<no_of_sps; i++) neweival(i) = eigenspectrum[i].first;
-    cout << "Eigenvalues are: " << neweival.transpose() << endl << endl;
-
-    cout << "Normalization of states: " << endl;
     for(int i=0; i< states.cols(); i++)
-  	{
-      states.col(i) = states.col(i)/sqrt(integrate_psi(i));
-      cout << "Column-" << i << " Normalization= " << integrate_psi(i) << endl;
+    {
+      old_states.col(i) = states.col(i);
+      states.col(i)= eigenspectrum[i].second;
     }
+    for(int i=0; i< states.cols(); i++) states.col(i) = states.col(i)/sqrt(integrate_psi(i));
+    for(int i=0; i< states.cols(); i++) states.col(i) = current_part*states.col(i) + old_part*old_states.col(i);
+
+    oldeival = neweival; for(int i=0; i<no_of_sps; i++) neweival(i) = eigenspectrum[i].first;
 
     string filename = "data/loop"+to_string(master_loop)+".txt";
     fout.open(filename);
@@ -225,6 +229,12 @@ int main()
       fout << endl;
     }
     fout.close();
+
+    if(choice_for_result=='Y'|| choice_for_result=='y')
+     {
+       cout << "Loop-" << master_loop << "\n============================\n";
+       cout << "Eigenvalues are: " << neweival.transpose() << endl;
+     }
 
     double max_deviation = (neweival - oldeival).cwiseAbs().maxCoeff();
     if(max_deviation < tolerance) break;
