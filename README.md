@@ -1,6 +1,6 @@
 # Hartree-fock-scf
 
-This project is a solution to the mid-semester examination of course-[P451](http://www.niser.ac.in/sps/course/p451-advanced-solid-state-physics ), Advanced Solid State Physics, offered during Fall, 2017 in School of Physical Sciences, NISER, Bhubaneswar. This project, with continued improvement, seeks to develop a generalized routine for various implementations of Hartree-Fock like mean-field techniques.
+This project is a solution to the mid-semester examination of course-<a href="http://www.niser.ac.in/sps/course/p451-advanced-solid-state-physics" target="_blank">P451</a>, Advanced Solid State Physics, offered during Fall, 2017 in School of Physical Sciences, NISER, Bhubaneswar. This project, with continued improvement, seeks to develop a generalized routine for various implementations of Hartree-Fock like mean-field techniques.
 
 This branch implements the averaged density Hartree-Fock method to find SCF corrections to a system with given potential and number of electrons.
 
