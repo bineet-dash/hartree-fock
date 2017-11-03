@@ -150,15 +150,16 @@ int main(int argc, char* argv[])
 
   if(argc !=3) {cout << "pass proper arguments to main()\n"; exit(1);}
   istringstream ss(argv[1]);
-  if (!(ss >> separation)) {cerr << "Invalid separation. Input: " << argv[1] << ". Exiting...\n"; exit(1);}  ss.clear();
+  if (!(ss >> separation)) {cerr << "Invalid separation. Input: " << argv[1] << ". Exiting...\n"; exit(2);}  ss.clear();
   separation *= 0.01;
   ss.str(argv[2]);
-  if (!(ss >> no_of_wells)) {cerr << "Invalid number of wells. Input: " << argv[2] << ". Exiting...\n"; exit(1);}  ss.clear();
+  if (!(ss >> no_of_wells)) {cerr << "Invalid number of wells. Input: " << argv[2] << ". Exiting...\n"; exit(3);}  ss.clear();
 
   double current_part, old_part;
-  cout << "Enter contribution of current_part and old_part: ";
-  cin >> current_part >> old_part;
-  if(current_part+old_part != 1.0 || current_part < 0.0 || old_part < 0.0) {cerr << "Enter proper values. Exiting...\n"; exit(1);}
+  // cout << "Enter contribution of current_part and old_part: ";
+  // cin >> current_part >> old_part;
+  current_part = 1.0; old_part=0.0;
+  if(current_part+old_part != 1.0 || current_part < 0.0 || old_part < 0.0) {cerr << "Enter proper values. Exiting...\n"; exit(4);}
 
   for(int i=0; i<= no_of_pts; i++) {point(i)=low_lim+i*dx;}
 
@@ -200,11 +201,11 @@ int main(int argc, char* argv[])
   fout.close();
   cout.precision(8);
 
-  char choice_for_result = 'y';
+  char choice_for_result = 'n';
 
   for(; ; )
   {
-    begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
+    // begin_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 
     for(int i=0; i<rho_H.size(); i++) rho_H(i) = rho_H_elements(i);
     for(int i=0; i<rho_HF.rows(); i++)
@@ -249,9 +250,12 @@ int main(int argc, char* argv[])
 
     if(max_deviation < tolerance) break;
 
-    if(master_loop==10)
+    int too_many_loops=15;
+
+    if(master_loop==too_many_loops)
       {
-        cout << "No convergence even after 10 loops.\n";
+        exit(9);
+        cout << "No convergence even after "<< too_many_loops <<" loops.\n";
         end_ms = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
         show_time(begin_ms,end_ms,"Hartree_fock calculation has already taken");
         cout << "Do you want to view the  result from further loops? (Y or N): "; cin >> choice_for_result;
@@ -271,8 +275,7 @@ int main(int argc, char* argv[])
     dataout << separation << " " << correction.transpose() << endl;
     dataout.close();
 
-
-
+    return 0;
 }
 
 void show_time(milliseconds begin_ms, milliseconds end_ms,string s)
@@ -293,3 +296,10 @@ void show_time(milliseconds begin_ms, milliseconds end_ms,string s)
     else
     {cout << s << "  " << t << "time. Wrong t received.\n"; }
 }
+
+//Exit Codes:
+// 1: insufficient arguments to main
+// 2: invalid input to separation
+// 3: invalid input to no_of_wells
+// 4: invalid combinations of current_part & old_part
+// 9: too many loops, HF not converging
